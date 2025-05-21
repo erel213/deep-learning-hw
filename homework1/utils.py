@@ -226,6 +226,7 @@ def train(X, y, epochs, batch_size):
     # TODO: shuffle
     batches = np.random.permutation(X.shape[1])
     #... TODO: divide to batches
+    batches = np.array_split(batches, batch_size)
     for X_b, y_b in batches:
       y_hat = nn.forward_batch(X_b)
       epoch_loss += nn.log_loss_batch(y_hat, y_b)
