@@ -243,8 +243,76 @@ def train(X, y, epochs, batch_size):
 # - Normalize/standardize features if necessary
 # - Split the data into training (75%), validation (10%), and test (15%) sets
 # - Create DataLoader objects with batch_size=8
+class DataLoader:
+  def __init__(self, X, y, batch_size):
+    self.X = X
+    self.y = y
+    self.batch_size = batch_size
+    self.indices = np.random.permutation(X.shape[1])
+    self.batches = np.array_split(self.indices, self.batch_size)
+
+  def __iter__(self):
+    return self
+  
+  def __next__(self):
+    if len(self.batches) == 0:
+      raise StopIteration
+    batch_indices = self.batches.pop(0)
+    X_batch = self.X[:, batch_indices]
+    y_batch = self.y[batch_indices]
+    return X_batch, y_batch
+
+def preprocess_data(file_path):
+  '''
+  Preprocess the bike sharing dataset ('hour.csv')
+  '''
+  # Load numpy arrays
+  with open(file_path, 'r') as file:
+    data = np.loadtxt(file, delimiter=',', skiprows=1)  # skiprows=1 to skip the header row
+    # Select required features: temp, atemp, hum, windspeed, weekday
+    X = data[:, [10, 11, 12, 13, 7]]  # indices for temp, atemp, hum, windspeed, weekday
+    y = data[:, 17]  # index for success
+    # Normalize/standardize features
+    X = (X - X.mean(axis=0)) / X.std(axis=0)
+    # Split data into training, validation, and test sets
+    train_X, train_y, val_X, val_y, test_X, test_y = split_data(X, y)
+    # Create DataLoader objects
+    train_loader = DataLoader(train_X, train_y, batch_size=8)
+    val_loader = DataLoader(val_X, val_y, batch_size=8)
+    test_loader = DataLoader(test_X, test_y, batch_size=8)
+    return train_loader, val_loader, test_loader
 
 
+def split_data(X, y, train_ratio=0.75, val_ratio=0.1, test_ratio=0.15):
+  '''
+  Split the data into training, validation, and test sets
+  X - numpy array of shape (num_instances, num_features)
+  y - numpy array of shape (num_instances,)
+  train_ratio - float, the ratio of the training set
+  val_ratio - float, the ratio of the validation set
+  test_ratio - float, the ratio of the test set
+  Returns:
+  train_X, train_y, val_X, val_y, test_X, test_y
+  '''
+  # Calculate the number of instances for each set
+  num_instances = X.shape[0]
+  num_train = int(train_ratio * num_instances)
+  num_val = int(val_ratio * num_instances)
+
+  # Shuffle the data
+  indices = np.random.permutation(num_instances)
+  X = X[indices]
+  y = y[indices]
+
+  # Split the data
+  train_X = X[:num_train]
+  train_y = y[:num_train]
+  val_X = X[num_train:num_train+num_val]
+  val_y = y[num_train:num_train+num_val]
+  test_X = X[num_train+num_val:]
+  test_y = y[num_train+num_val:]
+
+  return train_X, train_y, val_X, val_y, test_X, test_y
 
 # TODO: Train the neural network
 # - Implement the network with architecture [5, 40, 30, 10, 7, 5, 3, 1]
