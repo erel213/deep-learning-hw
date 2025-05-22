@@ -215,7 +215,6 @@ class MyNN:
     return cost
 
 
-nn = MyNN(0.01, [3, 2, 1])
 
 def train(X, y, epochs, batch_size):
   '''
@@ -320,6 +319,23 @@ def split_data(X, y, train_ratio=0.75, val_ratio=0.1, test_ratio=0.15):
 # - Use batch_size=8 as specified
 # - Calculate and store train and validation loss for each epoch
 # - Track training progres
+def train_nn(train_loader: DataLoader, val_loader: DataLoader, epochs: int):
+  '''
+  Train the neural network
+  train_loader: DataLoader object for the training set
+  val_loader: DataLoader object for the validation set
+  epochs: int, the number of epochs to train the network
+  '''
+  nn = MyNN(0.01, [5, 40, 30, 10, 7, 5, 3, 1])
+  for epoch in range(epochs):
+    train_loss = 0
+    val_loss = 0
+    for X_batch, y_batch in train_loader:
+      y_hat = nn.forward_batch(X_batch)
+      train_loss += nn.log_loss_batch(y_hat, y_batch)
+    train_loss /= len(train_loader)
+    val_loss = nn.log_loss_batch(nn.forward_batch(val_loader.X), val_loader.y)
+    print(f'Epoch {epoch+1}, Train Loss: {train_loss}, Validation Loss: {val_loss}')
 
 
 
