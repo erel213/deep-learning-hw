@@ -1,5 +1,7 @@
 import numpy as np
 np.random.seed(42)
+import matplotlib.pyplot as plt
+from typing import List, Dict, Tuple
 
 class MyNN:
   def __init__(self, learning_rate, layer_sizes):
@@ -320,22 +322,85 @@ def split_data(X, y, train_ratio=0.75, val_ratio=0.1, test_ratio=0.15):
 # - Calculate and store train and validation loss for each epoch
 # - Track training progres
 def train_nn(train_loader: DataLoader, val_loader: DataLoader, epochs: int):
-  '''
-  Train the neural network
-  train_loader: DataLoader object for the training set
-  val_loader: DataLoader object for the validation set
-  epochs: int, the number of epochs to train the network
-  '''
-  nn = MyNN(0.01, [5, 40, 30, 10, 7, 5, 3, 1])
-  for epoch in range(epochs):
-    train_loss = 0
-    val_loss = 0
-    for X_batch, y_batch in train_loader:
-      y_hat = nn.forward_batch(X_batch)
-      train_loss += nn.log_loss_batch(y_hat, y_batch)
-    train_loss /= len(train_loader)
-    val_loss = nn.log_loss_batch(nn.forward_batch(val_loader.X), val_loader.y)
-    print(f'Epoch {epoch+1}, Train Loss: {train_loss}, Validation Loss: {val_loss}')
+    """
+    Train the neural network with visualization support.
+    
+    Parameters:
+    train_loader: DataLoader object for the training set
+    val_loader: DataLoader object for the validation set
+    epochs: int, the number of epochs to train the network
+    """
+    nn = MyNN(0.01, [5, 40, 30, 10, 7, 5, 3, 1])
+    visualizer = TrainingVisualizer()
+    
+    for epoch in range(epochs):
+        # Training phase
+        train_loss = 0
+        train_correct = 0
+        train_total = 0
+        
+        for X_batch, y_batch in train_loader:
+            # Forward pass
+            y_hat = nn.forward_batch(X_batch)
+            train_loss += nn.log_loss_batch(y_hat, y_batch)
+            
+            # Calculate accuracy
+            predictions = (y_hat > 0.5).astype(int)
+            train_correct += np.sum(predictions == y_batch)
+            train_total += y_batch.size
+            
+            # Backward pass and update
+            nn.backward_batch(y_batch)
+            nn.update()
+        
+        # Calculate average training loss and accuracy
+        train_loss /= len(train_loader)
+        train_accuracy = train_correct / train_total
+        
+        # Validation phase
+        val_loss = 0
+        val_correct = 0
+        val_total = 0
+        
+        for X_batch, y_batch in val_loader:
+            y_hat = nn.forward_batch(X_batch)
+            val_loss += nn.log_loss_batch(y_hat, y_batch)
+            
+            # Calculate accuracy
+            predictions = (y_hat > 0.5).astype(int)
+            val_correct += np.sum(predictions == y_batch)
+            val_total += y_batch.size
+        
+        # Calculate average validation loss and accuracy
+        val_loss /= len(val_loader)
+        val_accuracy = val_correct / val_total
+        
+        # Update visualizer
+        visualizer.update(
+            train_loss=train_loss,
+            val_loss=val_loss,
+            train_accuracy=train_accuracy,
+            val_accuracy=val_accuracy,
+            learning_rate=nn.learning_rate
+        )
+        
+        # Print progress
+        print(f'Epoch {epoch+1}/{epochs}:')
+        print(f'  Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}')
+        print(f'  Val Loss: {val_loss:.4f}, Val Accuracy: {val_accuracy:.4f}')
+    
+    # Generate visualizations
+    visualizer.plot_training_curves()
+    visualizer.plot_learning_rate()
+    visualizer.plot_loss_distribution()
+    
+    # Print training summary
+    summary = visualizer.generate_summary()
+    print("\nTraining Summary:")
+    for metric, value in summary.items():
+        print(f"{metric}: {value:.4f}")
+    
+    return nn, visualizer
 
 
 
@@ -343,7 +408,125 @@ def train_nn(train_loader: DataLoader, val_loader: DataLoader, epochs: int):
 # - Plot the training loss per epoch
 # - Create additional relevant plots (validation loss, learning curves, etc.)
 # - Make sure all plots have proper labels, titles, and legends
-# - Add brief analysis of what the plots reveal about your model's performance
+# - Add brief analysis of what the plots reveal about your model's performances
+
+class TrainingVisualizer:
+    def __init__(self):
+        """Initialize the training visualizer with empty history."""
+        self.history = {
+            'train_loss': [],
+            'val_loss': [],
+            'train_accuracy': [],
+            'val_accuracy': [],
+            'learning_rates': []
+        }
+    
+    def update(self, 
+              train_loss: float, 
+              val_loss: float, 
+              train_accuracy: float = None, 
+              val_accuracy: float = None,
+              learning_rate: float = None):
+        """Update the training history with new metrics."""
+        self.history['train_loss'].append(train_loss)
+        self.history['val_loss'].append(val_loss)
+        if train_accuracy is not None:
+            self.history['train_accuracy'].append(train_accuracy)
+        if val_accuracy is not None:
+            self.history['val_accuracy'].append(val_accuracy)
+        if learning_rate is not None:
+            self.history['learning_rates'].append(learning_rate)
+    
+    def plot_training_curves(self, save_path: str = None):
+        """Plot training and validation loss curves."""
+        plt.figure(figsize=(12, 5))
+        
+        # Plot loss curves
+        plt.subplot(1, 2, 1)
+        plt.plot(self.history['train_loss'], label='Training Loss', color='blue')
+        plt.plot(self.history['val_loss'], label='Validation Loss', color='red')
+        plt.title('Training and Validation Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.grid(True)
+        
+        # Plot accuracy curves if available
+        if self.history['train_accuracy'] and self.history['val_accuracy']:
+            plt.subplot(1, 2, 2)
+            plt.plot(self.history['train_accuracy'], label='Training Accuracy', color='blue')
+            plt.plot(self.history['val_accuracy'], label='Validation Accuracy', color='red')
+            plt.title('Training and Validation Accuracy')
+            plt.xlabel('Epoch')
+            plt.ylabel('Accuracy')
+            plt.legend()
+            plt.grid(True)
+        
+        plt.tight_layout()
+        if save_path:
+            plt.savefig(save_path)
+        plt.show()
+    
+    def plot_learning_rate(self, save_path: str = None):
+        """Plot learning rate changes over time."""
+        if not self.history['learning_rates']:
+            return
+        
+        plt.figure(figsize=(8, 4))
+        plt.plot(self.history['learning_rates'], color='green')
+        plt.title('Learning Rate Changes')
+        plt.xlabel('Epoch')
+        plt.ylabel('Learning Rate')
+        plt.grid(True)
+        
+        if save_path:
+            plt.savefig(save_path)
+        plt.show()
+    
+    def plot_loss_distribution(self, save_path: str = None):
+        """Plot the distribution of training and validation losses."""
+        plt.figure(figsize=(10, 4))
+        
+        # Plot histograms
+        plt.subplot(1, 2, 1)
+        plt.hist(self.history['train_loss'], bins=30, alpha=0.5, label='Training Loss', color='blue')
+        plt.hist(self.history['val_loss'], bins=30, alpha=0.5, label='Validation Loss', color='red')
+        plt.title('Loss Distribution')
+        plt.xlabel('Loss Value')
+        plt.ylabel('Frequency')
+        plt.legend()
+        
+        # Plot box plots
+        plt.subplot(1, 2, 2)
+        plt.boxplot([self.history['train_loss'], self.history['val_loss']], 
+                   labels=['Training Loss', 'Validation Loss'])
+        plt.title('Loss Box Plot')
+        plt.ylabel('Loss Value')
+        
+        plt.tight_layout()
+        if save_path:
+            plt.savefig(save_path)
+        plt.show()
+    
+    def generate_summary(self) -> Dict:
+        """Generate a summary of the training metrics."""
+        summary = {
+            'final_train_loss': self.history['train_loss'][-1],
+            'final_val_loss': self.history['val_loss'][-1],
+            'min_train_loss': min(self.history['train_loss']),
+            'min_val_loss': min(self.history['val_loss']),
+            'epochs_trained': len(self.history['train_loss'])
+        }
+        
+        if self.history['train_accuracy'] and self.history['val_accuracy']:
+            summary.update({
+                'final_train_accuracy': self.history['train_accuracy'][-1],
+                'final_val_accuracy': self.history['val_accuracy'][-1],
+                'max_train_accuracy': max(self.history['train_accuracy']),
+                'max_val_accuracy': max(self.history['val_accuracy'])
+            })
+        
+        return summary
 
 
 # TODO: Evaluate model performance on the test set
