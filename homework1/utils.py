@@ -89,7 +89,6 @@ class MyNN:
     dz = a_output - y               # The difference between the predicted output (a_output) and the true target value (y). derivative of loss w.r.t. 
 
     for layer_index in range(len(self.layer_sizes) - 1, 0, -1): #  Loop through layers in reverse order, if you have 3 layers ([3, 4, 1]), layer_index will be: 2 → 1
-      print(layer_index)
       a_l_1 = self.memory['a_' + str(layer_index - 1)]  # the activation from the previous layer (i.e., a_{i-1}).
       dW = np.dot(dz.reshape(-1, 1), a_l_1.reshape(1, -1))  # Gradient of the weights for the current layer.
       self.grads['dW_' + str(layer_index)] = dW
@@ -205,8 +204,9 @@ class MyNN:
     # Compute loss for each instance
     for i in range(number_of_instances):
         # Extract the i-th prediction and target
-        y_hat_i = y_hat[:, i].reshape(-1, 1)
-        y_i = y[:, i].reshape(-1, 1)
+        # Convert to float and ensure correct shape
+        y_hat_i = y_hat[:, i].astype(float)
+        y_i = y[:, i].astype(float)
         
         # Compute loss for the i-th instance
         instance_cost = self.log_loss(y_hat_i, y_i)
@@ -271,25 +271,19 @@ class DataLoader:
       raise StopIteration
     batch_indices = self.batches.pop(0)
     X_batch = self.X[:, batch_indices]
-    y_batch = self.y[batch_indices]
+    y_batch = self.y[:, batch_indices]
     return X_batch, y_batch
 
 def preprocess_data(file_path):
     '''
     Preprocess the bike sharing dataset ('hour.csv')
     '''
-    # Load numpy arrays
-    df = pd.read_csv(file_path)
-    
     # Define the features we want to use
     feature_columns = ['temp', 'atemp', 'hum', 'windspeed', 'weekday']
+    df = pd.read_csv(file_path, usecols=feature_columns + ['success'])
     
-    # Create a mask for the features
-    feature_mask = df.columns.isin(feature_columns)
-    
-    # Select features using the mask
-    X = df.loc[:, feature_mask].values
-    y = df['success'].values
+    X = df.loc[:, feature_columns].values.T
+    y = df['success'].values.reshape(1, -1)
     
     # Normalize/standardize features
     X = (X - X.mean(axis=0)) / X.std(axis=0)
@@ -306,35 +300,35 @@ def preprocess_data(file_path):
 
 
 def split_data(X, y, train_ratio=0.75, val_ratio=0.1, test_ratio=0.15):
-  '''
-  Split the data into training, validation, and test sets
-  X - numpy array of shape (num_instances, num_features)
-  y - numpy array of shape (num_instances,)
-  train_ratio - float, the ratio of the training set
-  val_ratio - float, the ratio of the validation set
-  test_ratio - float, the ratio of the test set
-  Returns:
-  train_X, train_y, val_X, val_y, test_X, test_y
-  '''
-  # Calculate the number of instances for each set
-  num_instances = X.shape[0]
-  num_train = int(train_ratio * num_instances)
-  num_val = int(val_ratio * num_instances)
+    '''
+    Split the data into training, validation, and test sets
+    X - numpy array of shape (num_features, num_instances)
+    y - numpy array of shape (1, num_instances)
+    train_ratio - float, the ratio of the training set
+    val_ratio - float, the ratio of the validation set
+    test_ratio - float, the ratio of the test set
+    Returns:
+    train_X, train_y, val_X, val_y, test_X, test_y
+    '''
+    # Calculate the number of instances for each set
+    num_instances = X.shape[1]
+    num_train = int(train_ratio * num_instances)
+    num_val = int(val_ratio * num_instances)
 
-  # Shuffle the data
-  indices = np.random.permutation(num_instances)
-  X = X[indices]
-  y = y[indices]
+    # Shuffle the data
+    indices = np.random.permutation(num_instances)
+    X = X[:, indices]
+    y = y[:, indices]
 
-  # Split the data
-  train_X = X[:num_train]
-  train_y = y[:num_train]
-  val_X = X[num_train:num_train+num_val]
-  val_y = y[num_train:num_train+num_val]
-  test_X = X[num_train+num_val:]
-  test_y = y[num_train+num_val:]
+    # Split the data
+    train_X = X[:, :num_train]
+    train_y = y[:, :num_train]
+    val_X = X[:, num_train:num_train+num_val]
+    val_y = y[:, num_train:num_train+num_val]
+    test_X = X[:, num_train+num_val:]
+    test_y = y[:, num_train+num_val:]
 
-  return train_X, train_y, val_X, val_y, test_X, test_y
+    return train_X, train_y, val_X, val_y, test_X, test_y
 
 # TODO: Train the neural network
 # - Implement the network with architecture [5, 40, 30, 10, 7, 5, 3, 1]
