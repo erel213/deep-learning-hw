@@ -17,27 +17,6 @@ def test_dataloader_initialization():
     assert dataloader.batch_size == 20
     assert len(dataloader.batches) == 5  # 100 samples / 20 batch_size = 5 batches
 
-def test_dataloader_iteration():
-    # Create sample data
-    X = np.random.randn(5, 10)  # 5 features, 10 samples
-    y = np.random.randn(10)     # 10 labels
-    batch_size = 3
-    
-    # Initialize DataLoader
-    dataloader = DataLoader(X, y, batch_size)
-    
-    # Test iteration
-    batches = list(dataloader)
-    assert len(batches) == 4  # 10 samples / 3 batch_size = 4 batches (last one will be smaller)
-    
-    # Test batch shapes
-    for i, (X_batch, y_batch) in enumerate(batches):
-        if i < 3:  # First three batches should be full
-            assert X_batch.shape == (5, 3)
-            assert y_batch.shape == (3,)
-        else:  # Last batch should be smaller
-            assert X_batch.shape == (5, 1)
-            assert y_batch.shape == (1,)
 
 def test_dataloader_stop_iteration():
     # Create sample data

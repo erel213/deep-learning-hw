@@ -257,8 +257,11 @@ class DataLoader:
     self.X = X
     self.y = y
     self.batch_size = batch_size
-    self.indices = np.random.permutation(X.shape[1])
-    self.batches = np.array_split(self.indices, self.batch_size)
+    # Calculate number of batches needed
+    n_samples = X.shape[1]
+    n_batches = (n_samples + batch_size - 1) // batch_size  # Ceiling division
+    # Create batches
+    self.batches = np.array_split(np.random.permutation(n_samples), n_batches)
 
   def __iter__(self):
     return self
