@@ -229,13 +229,18 @@ def train(X, y, epochs, batch_size):
     # TODO: shuffle
     batches = np.random.permutation(X.shape[1])
     #... TODO: divide to batches
-    batches = np.array_split(batches, batch_size)
-    for X_b, y_b in batches:
-      y_hat = nn.forward_batch(X_b)
-      epoch_loss += nn.log_loss_batch(y_hat, y_b)
-      nn.backward_batch(y_b)
-      nn.update()
-    print(f'Epoch {e}, loss={epoch_loss/len(batches)}')
+    batch_indices = np.array_split(batches, X.shape[1] // batch_size)
+    
+    for batch_idx in batch_indices:
+        # Use indices to select the corresponding data
+        X_b = X[:, batch_idx]
+        y_b = y[:, batch_idx]
+        
+        y_hat = nn.forward_batch(X_b)
+        epoch_loss += nn.log_loss_batch(y_hat, y_b)
+        nn.backward_batch(y_b)
+        nn.update()
+    print(f'Epoch {e}, loss={epoch_loss/len(batch_indices)}')
 
 
 
