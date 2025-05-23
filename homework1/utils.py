@@ -260,12 +260,20 @@ class DataLoader:
     # Calculate number of batches needed
     n_samples = X.shape[1]
     n_batches = (n_samples + batch_size - 1) // batch_size  # Ceiling division
-    # Create batches
-    self.batches = np.array_split(np.random.permutation(n_samples), n_batches)
+    # Store original number of samples for reset
+    self.n_samples = n_samples
+    self.n_batches = n_batches
+    # Create initial batches
+    self.reset()
+
+  def reset(self):
+    """Reset the batches for a new epoch."""
+    self.batches = np.array_split(np.random.permutation(self.n_samples), self.n_batches)
 
   def __iter__(self):
+    self.reset()  # Reset batches when starting a new iteration
     return self
-  
+
   def __next__(self):
     if len(self.batches) == 0:
       raise StopIteration
@@ -274,7 +282,11 @@ class DataLoader:
     y_batch = self.y[:, batch_indices]
     return X_batch, y_batch
 
-def preprocess_data(file_path):
+  def __len__(self):
+    return self.n_batches
+
+
+def preprocess_data(file_path, batch_size=100):
     '''
     Preprocess the bike sharing dataset ('hour.csv')
     '''
@@ -286,15 +298,15 @@ def preprocess_data(file_path):
     y = df['success'].values.reshape(1, -1)
     
     # Normalize/standardize features
-    X = (X - X.mean(axis=0)) / X.std(axis=0)
+    X = (X - X.mean(axis=1, keepdims=True)) / X.std(axis=1, keepdims=True)
     
     # Split data into training, validation, and test sets
     train_X, train_y, val_X, val_y, test_X, test_y = split_data(X, y)
     
     # Create DataLoader objects
-    train_loader = DataLoader(train_X, train_y, batch_size=8)
-    val_loader = DataLoader(val_X, val_y, batch_size=8)
-    test_loader = DataLoader(test_X, test_y, batch_size=8)
+    train_loader = DataLoader(train_X, train_y, batch_size=batch_size)
+    val_loader = DataLoader(val_X, val_y, batch_size=batch_size)
+    test_loader = DataLoader(test_X, test_y, batch_size=batch_size)
     
     return train_loader, val_loader, test_loader
 
@@ -336,7 +348,7 @@ def split_data(X, y, train_ratio=0.75, val_ratio=0.1, test_ratio=0.15):
 # - Use batch_size=8 as specified
 # - Calculate and store train and validation loss for each epoch
 # - Track training progres
-def train_nn(train_loader: DataLoader, val_loader: DataLoader, epochs: int):
+def train_nn(train_loader: DataLoader, val_loader: DataLoader, epochs: int, learning_rate: float):
     """
     Train the neural network with visualization support.
     
@@ -345,7 +357,7 @@ def train_nn(train_loader: DataLoader, val_loader: DataLoader, epochs: int):
     val_loader: DataLoader object for the validation set
     epochs: int, the number of epochs to train the network
     """
-    nn = MyNN(0.01, [5, 40, 30, 10, 7, 5, 3, 1])
+    nn = MyNN(learning_rate, [5, 40, 30, 10, 7, 5, 3, 1])
     visualizer = TrainingVisualizer()
     
     for epoch in range(epochs):
