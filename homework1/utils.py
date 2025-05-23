@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 np.random.seed(42)
 import matplotlib.pyplot as plt
 from typing import List, Dict, Tuple
@@ -271,23 +272,33 @@ class DataLoader:
     return X_batch, y_batch
 
 def preprocess_data(file_path):
-  '''
-  Preprocess the bike sharing dataset ('hour.csv')
-  '''
-  # Load numpy arrays
-  with open(file_path, 'r') as file:
-    data = np.loadtxt(file, delimiter=',', skiprows=1)  # skiprows=1 to skip the header row
-    # Select required features: temp, atemp, hum, windspeed, weekday
-    X = data[:, [10, 11, 12, 13, 7]]  # indices for temp, atemp, hum, windspeed, weekday
-    y = data[:, 17]  # index for success
+    '''
+    Preprocess the bike sharing dataset ('hour.csv')
+    '''
+    # Load numpy arrays
+    df = pd.read_csv(file_path)
+    
+    # Define the features we want to use
+    feature_columns = ['temp', 'atemp', 'hum', 'windspeed', 'weekday']
+    
+    # Create a mask for the features
+    feature_mask = df.columns.isin(feature_columns)
+    
+    # Select features using the mask
+    X = df.loc[:, feature_mask].values
+    y = df['success'].values
+    
     # Normalize/standardize features
     X = (X - X.mean(axis=0)) / X.std(axis=0)
+    
     # Split data into training, validation, and test sets
     train_X, train_y, val_X, val_y, test_X, test_y = split_data(X, y)
+    
     # Create DataLoader objects
     train_loader = DataLoader(train_X, train_y, batch_size=8)
     val_loader = DataLoader(val_X, val_y, batch_size=8)
     test_loader = DataLoader(test_X, test_y, batch_size=8)
+    
     return train_loader, val_loader, test_loader
 
 
