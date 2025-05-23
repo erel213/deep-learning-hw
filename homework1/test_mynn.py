@@ -81,9 +81,9 @@ def test_backward_batch(simple_nn, sample_batch):
     print(simple_nn.grads)
     # Check gradient shapes
     assert simple_nn.grads['dW_1'].shape == (3, 2)  # 3 hidden neurons, 2 input features
-    assert simple_nn.grads['db_1'].shape == (2,)    # 3 hidden neurons
+    assert simple_nn.grads['db_1'].shape == (3,)    # 3 hidden neurons
     assert simple_nn.grads['dW_2'].shape == (1, 3)  # 1 output neuron, 3 hidden neurons
-    assert simple_nn.grads['db_2'].shape == (3,)    # 1 output neuron
+    assert simple_nn.grads['db_2'].shape == (1,)    # 1 output neuron
 
 def test_log_loss_batch(simple_nn, sample_batch):
     """Test the log_loss_batch function to ensure it computes batch loss correctly."""

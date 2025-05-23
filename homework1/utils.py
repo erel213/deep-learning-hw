@@ -93,10 +93,12 @@ class MyNN:
       dW = np.dot(dz.reshape(-1, 1), a_l_1.reshape(1, -1))  # Gradient of the weights for the current layer.
       self.grads['dW_' + str(layer_index)] = dW
       W_l = self.model_params['W_' + str(layer_index)]
-      dz = (a_l_1 * (1 - a_l_1)).reshape(-1, 1) * np.dot(W_l.T, dz.reshape(-1, 1))
       # TODO: calculate and memorize db as well.
-      db = dz.flatten() # Gradient of the biases for the current layer - flatten() returns a copy of an array collapsed into 1D (a flat vector).
+      db = dz.reshape(-1)
       self.grads['db_' + str(layer_index)] = db
+      dz = (a_l_1 * (1 - a_l_1)).reshape(-1, 1) * np.dot(W_l.T, dz.reshape(-1, 1)) # WARNING: I change the order here initially we first compute dz and the update db 
+
+
 
   # TODO: update weights with grads
   def update(self):
